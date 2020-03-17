@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <title>AlbionOnline MarketPrice Tool</title>
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script>
+        
+    </script>
+</head>
+<body>
+    <h1>AlbionOnline MarketPrice Tool</h1>
+        <form id="apiform"  >
+            <div class="form-inline">
+                <div class="form-group">
+                    <label for='history_date' >History Date</label><br>
+                    <input id='history_date' class="form-control" placeholder="input history date" type="number" min="1" max="30" value=3 required>
+                </div>
+                <div class="form-group">
+                    <label for='timescale' >Timescale</label><br>
+                    <select id="timescale"  class="form-control"  data-placeholder="timescale"  required>
+                        <option>1</option>                                                      
+                        <option selected>6</option> 
+                        <option>24</option> 
+                    </select> 
+                </div>
+                <div class="form-group">
+                    <label for='quality'>Quality</label><br>
+                    <select id="quality"  class="form-control"  data-placeholder="timescale"  required>
+                        <option selected> 1</option>                                                      
+                        <option>2</option> 
+                        <option>3</option>
+                        <option>4</option> 
+                        <option>5</option> 
+                    </select> 
+                </div>
+                <div class="form-group">
+                    <label for='selected_location'>Location</label><br>
+                    <select id="selected_location"  title="Location" class="selectpicker"data-width="fit" data-live-search="true" multiple>
+                        <option ></option>
+                        <option >Bridgewatch</option>
+                        <option >Lymhurst</option>
+                        <option >Martlock</option>
+                        <option >Fort Sterling</option>
+                        <option >Thetford</option>
+                        <option >Black Market</option>
+                    </select>
+                </div>
+            </div>
+            <br>
+            <div class="form-group ">
+                <button id="upldate_chart" type="submit" class="btn btn-outline-success">Update</button>
+                <button id="refresh" type="button" class="btn btn-outline-primary">Clear Charts</button>
+                <!-- <button id="clear" type="button" class="btn btn-outline-dark">Clear</button> -->
+                <select id="item_list"  title="Choose one of the following..." class="selectpicker"data-width="fit"  data-max-options="4" data-live-search="true"  data-actions-box="true" multiple required>
+                    <option value=""></option>
+                </select>
+            </div>
+        </form>
+    <hr>
+ 
+    <div class="form-group">
+        <div id="chart" style=" display:flex;flex-wrap: wrap;"></div>
+    </div>
+
+    <!-- FOR TEST
+        <form class="form-inline">
+        <div class="form-group">
+            <div id="chart1" style='width: 600px;height:400px;'></div>
+            <div id="chart2" style='width: 600px;height:400px;'></div>
+        </div>
+    </form> FOR TEST -->
+    <!-- <button type="button" onclick="loadDoc()">Change Content</button> -->
+    <!-- <input type="text" id="Keyword">
+    <button onclick="findBackend()">findBackend</button>
+    <div id="result"></div> -->
+</body>
+
+
+<!--CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.12/dist/css/bootstrap-select.min.css">
+<link href="https://cdn.rawgit.com/harvesthq/chosen/gh-pages/chosen.min.css" rel="stylesheet"/>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+<style>
+    label {
+        width: 100px;
+    }
+</style>
+
+    
+<!--JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+<script src="https://cdn.rawgit.com/harvesthq/chosen/gh-pages/chosen.jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.12/dist/js/bootstrap-select.min.js"></script>
+<script src="echarts.min.js"></script>
+<script src="itemList.js"></script>
+<script type="text/javascript">
+
+    var save_location = GetCurrDir() + "/rawdata/";
+    var xhr = new XMLHttpRequest();
+
+    document.getElementById("refresh").addEventListener('click',function(){
+            $( "div[name='test']" ).remove();
+            // location.reload();
+		},false);
+        
+        
+    $( document ).ready(function() {
+        $('.bs-select-all').remove();
+    });
+
+    // document.getElementById("clear").addEventListener('click',function(){
+    //     // var itemSelectorOption = $('#item_list option:selected');
+    //     // itemSelectorOption.val("");
+    //     // $('#item_list').selectpicker('refresh');
+    // },false);
+
+    //****SearchAndUpadte*****///////
+    // document.getElementById("upldate_chart").addEventListener('click',function(){
+        $("#apiform").submit(function(e){
+            
+            selected_item = $('#item_list').val();
+            quality = $('#quality').val();
+            timescale = $('#timescale').val();
+            selected_location = $('#selected_location').val();
+            // console.log(selected_item);
+            for (n=0; n<selected_item.length; n++){
+                loadDoc(selected_item[n]);
+            }
+            e.preventDefault();
+		})
+    //↓↓↓↓↓↓↓↓↓backend↓↓↓↓↓↓↓↓↓↓↓↓//
+    function findBackend(){
+		var keyword = document.getElementById("Keyword").value;
+		var url = "http://localhost/AOChart/CoProject/AlbionOnline/backend/serverPHP.php/data/"+keyword+"/para2";
+		xhr.open("GET",url,false);
+		xhr.onreadystatechange = displayResult;
+		xhr.send();
+    }
+
+    function displayResult(){
+		if(xhr.readyState == 4){
+			if(xhr.status == 200){
+				var result = xhr.responseText;
+				result = "<p>"+result+"</p>";
+				var element = document.getElementById("result");
+				element.innerHTML = result;
+			}
+		}	
+    }
+    //↑↑↑↑↑↑↑↑↑↑↑↑backend↑↑↑↑↑↑↑↑↑↑
+
+    function fomateDate(oDate, sFomate, bZone) {
+        sFomate = sFomate.replace("YYYY", oDate.getFullYear());  //将sFomate中的YYYY替换为oDate.getFullYear()
+        sFomate = sFomate.replace("YY", String(oDate.getFullYear()).substr(2))//String(value)把给定的值转换成字符串。
+        sFomate = sFomate.replace("MM",  oDate.getMonth()+1)//替换MM
+        sFomate = sFomate.replace("DD",  oDate.getDate());//替换DD
+        sFomate = sFomate.replace("hh", oDate.getHours());//替换hh
+        sFomate = sFomate.replace("mm", oDate.getMinutes());//替换mm
+        sFomate = sFomate.replace("ss", oDate.getSeconds());//替换ss
+        if (bZone) 
+            sFomate = sFomate.replace(/\b(\d)\b/g, '0$1');//月份单位数x 替换为0X   (\b匹配一个单词的边界)
+        return sFomate;
+    }
+
+    function dateConvert(){
+        var d = new Date();
+        var today_date = d.getDate();
+        var history_days = $('#history_date').val()
+        var history_date = new Date(d.getTime() -  history_days * 24 * 3600 * 1000); //N天前
+        var input_date = fomateDate(history_date, 'MM-DD-YYYY',true);
+        return  input_date;
+    }
+
+
+    // loadDoc();
+    function loadDoc(selected_item,history_date) {
+        let item_name = selected_item;
+        var input_date = dateConvert();
+        let url = "https://www.albion-online-data.com/api/v2/stats/charts/"+item_name+ "?date="+input_date+"&locations=" + selected_location +"&qualities="+quality+"&time-scale="+timescale
+        /* {string} 請求方法 (method),{string} 目標 url,{boolean} 非同步 [async] -- 可選,{string} 使用者 [user] -- 可選,{string} 密碼 [password] -- 可選*/
+        //demo https://www.albion-online-data.com/api/v2/stats/charts/T4_BAG?date=2-5-2020&locations=Caerleon&qualities=2&time-scale=6
+        xhr.open("GET", url,false);
+        xhr.onreadystatechange = function handle () {
+                                if (this.readyState == 4 && this.status == 200) {
+                                        rawdata = JSON.parse(xhr.responseText);
+                                        if(rawdata.length>0){
+                                            $( "#chart" ).append(`<div name='test' style='width: 600px'> 
+                                                                        <h5 style='text-align:center;''>`+item_name+`</h5>
+                                                                        <div name='chart[]' style='width: 600px;height:400px;'></div>                                                                        
+                                                                    </div>
+                                                                `);
+                                            multipleLineChart(rawdata);
+                                        }else{
+                                            $( "#chart" ).append( "<p><h2'> No Data From " + item_name + "Quality: " + quality + "</h2><p>" );
+                                        }
+                                    }
+                                };
+        xhr.send();
+        console.log(url);
+    };
+
+    function multipleLineChart(rawdata){
+        let last_chart = document.querySelectorAll("div[name^='chart']").length
+        var myChart = echarts.init(document.getElementsByName('chart[]')[last_chart-1]);
+        // var myChart = echarts.init(document.getElementById('main'));
+        let locations = [], prices = [],timestamps = [];
+        title = rawdata[0].item_id;
+        for (var prop in rawdata) {
+            locations.push(rawdata[prop]["location"]);
+            prices.push(rawdata[prop]['data']['prices_avg']);
+            timestamps.push(rawdata[prop]['data']['timestamps']);
+        }
+        // console.log(locations);
+        // console.log(prices);
+
+        /*perpare series for chart */
+        let arr_series =[];
+        for (i=0; i<rawdata.length; i++){
+            series = { name: locations[i], type:'line', data:prices[i] };
+            // console.log(series)
+            arr_series.push(series);
+        }
+        /*for found out the maximun timestamp */
+        let max = timestamps.length;
+        timestamps.map(v => max = Math.max(max, v.length));
+        longest_timestamp = timestamps.filter(v => v.length == max);
+        // console.log(longest_timestamp);
+
+        // 绘制图表
+        var option = {
+            tooltip: {
+                trigger: 'axis'
+            },
+            legend: {
+                data: locations  
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                containLabel: true
+            },
+            toolbox: {
+                feature: {
+                    saveAsImage: {}
+                }
+            },
+            xAxis: {
+                show: true,
+                type: 'category',
+                boundaryGap: false,
+                interval: 0,
+                data: longest_timestamp[0]
+            },
+            yAxis: {
+                type: 'value'
+            },
+            series: arr_series
+        };
+
+        myChart.setOption(option);
+    }
+
+    // var myChart1 = echarts.init(document.getElementById('chart1'));
+    //     option = {
+    //         legend: {},
+    //         tooltip: {},
+    //         dataset: {
+    //             // 提供一份数据。
+    //             source: [
+    //                 ['product', '2015', '2016', '2017'],
+    //                 ['Matcha Latte', 43.3, 85.8, 93.7],
+    //                 ['Milk Tea', 83.1, 73.4, 55.1],
+    //                 ['Cheese Cocoa', 86.4, 65.2, 82.5],
+    //                 ['Walnut Brownie', 72.4, 53.9, 39.1]
+    //             ]
+    //         },
+    //         // 声明一个 X 轴，类目轴（category）。默认情况下，类目轴对应到 dataset 第一列。
+    //         xAxis: {type: 'category'},
+    //         // 声明一个 Y 轴，数值轴。
+    //         yAxis: {},
+    //         // 声明多个 bar 系列，默认情况下，每个系列会自动对应到 dataset 的每一列。
+    //         series: [
+    //             {type: 'bar'},
+    //             {type: 'bar'},
+    //             {type: 'bar'}
+    //         ]
+    //     }
+    //     myChart1.setOption(option);
+    // var myChart2 = echarts.init(document.getElementById('chart2'));
+    //     option = {
+    //         legend: {},
+    //         tooltip: {},
+    //         dataset: {
+    //             // 提供一份数据。
+    //             source: [
+    //                 ['product', '2015', '2016', '2017'],
+    //                 ['Matcha Latte', 43.3, 85.8, 93.7],
+    //                 ['Milk Tea', 83.1, 73.4, 55.1],
+    //                 ['Cheese Cocoa', 86.4, 65.2, 82.5],
+    //                 ['Walnut Brownie', 72.4, 53.9, 39.1]
+    //             ]
+    //         },
+    //         // 声明一个 X 轴，类目轴（category）。默认情况下，类目轴对应到 dataset 第一列。
+    //         xAxis: {type: 'category'},
+    //         // 声明一个 Y 轴，数值轴。
+    //         yAxis: {},
+    //         // 声明多个 bar 系列，默认情况下，每个系列会自动对应到 dataset 的每一列。
+    //         series: [
+    //             {type: 'bar'},
+    //             {type: 'bar'},
+    //             {type: 'bar'}
+    //         ]
+    //     }
+    //     myChart2.setOption(option);
+
+    // download grap data
+    
+    function download(content, fileName, contentType) {
+        var a = document.createElement("a");
+        var file = new Blob([content], {type: contentType});
+        a.href = URL.createObjectURL(file);
+        a.download = fileName;
+        a.click();
+    }
+   
+    //Parent directory
+    function GetCurrDir(){  
+        var pathName = window.location.pathname.substring(1);   
+        var DirName = pathName == '' ? '' : pathName.substring(0, pathName.lastIndexOf('/'));   
+        var reg=new RegExp("%20","g");  
+        return DirName.replace(reg, " ");//替换空格  
+    }
+    
+    function itemListLoad(){
+        var items = str.split(",");
+        for (i=0; i<items.length; i++) {
+            $('#item_list').append('<option>' + items[i] + '</option>');
+        }
+        $('#item_list').trigger("chosen:updated");
+    }
+    console.time('itemListLoad');
+    itemListLoad();
+    console.timeEnd('itemListLoad');
+
+</script>                           
+</html>
+
