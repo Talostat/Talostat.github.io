@@ -11,7 +11,7 @@
     border-radius: 50%;
     width: 20px;
     height:20px;
-    background-color:red;
+    background-color:#BEBBB8;
     position:fixed;
   }
 </style>
@@ -19,9 +19,9 @@
 $(document).ready(function(){
     animateDiv();
     $(".a").hover(function(){
-      $(".a").css("background-color","blue");
+      $(".a").css("background-color","black");//$(".a").css("background-color","blue");
     },function(){
-      $(".a").css("background-color","red");
+      $(".a").css("background-color","#BEBBB8");//$(".a").css("background-color","red");
   });
   var windowHeight = $(window).height(); 
      $('#wind').css('min-height',windowHeight+'px');
@@ -61,7 +61,14 @@ function calcSpeed(prev, next) {
     return speed;
 }
 
+// $('input[type=radio][name=dot_color]').change(function() {
+//     if (this.value == 'red_blue') {
+        
+//     }
+//     else if (this.value == 'black_grey') {
 
+//     }
+// });
 
 </script>
 </head>
@@ -69,7 +76,10 @@ function calcSpeed(prev, next) {
   <div id="wind"> 
   SPEED:<input id='speed' type="range" value='10' min="10" max="100">(10~100)
   SIZE:<input id='size' type="range" value='30' min="10" max="100">(10~100)
+  <!-- <input type="radio" name="dot_color" value="red_blue">
+  <input type="radio" name="dot_color" value="black_grey"> -->
   <div class='a'></div>
+  
 </div>
 </body>
 </html>
