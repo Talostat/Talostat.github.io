@@ -44,14 +44,12 @@
     <script>
 
         document.getElementById("sound1").addEventListener('mousedown',function(){
-            var drum = new Pizzicato.Sound('./drum1.mp3', function() {
-                drum.play();
-            });
+            var drum = new Audio('./drum1.mp3');
+            drum.play();
         },false)
         document.getElementById("sound2").addEventListener('mousedown',function(){
-            var drum = new Pizzicato.Sound('./drum2.mp3', function() {
-                drum.play();
-            });
+            var drum = new Audio('./drum2.mp3');
+            drum.play();
         },false)
       
 
