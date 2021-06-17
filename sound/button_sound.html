@@ -37,15 +37,19 @@
 
 </head>
 <body>
-    <a id="sound" class="shape">sound</a>
-
+    <a id="sound1" class="shape">sound</a>
+    <a id="sound2" class="shape">sound</a>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzicato/0.6.4/Pizzicato.min.js" integrity="sha512-K+cPWcoDCr2JFFfe912LrvRUQbVJuWNfeWK5r/HrmpDs8ELrsjVib8Fs5oAxzu76fG66ajGhDLvvcxBbeEzl9g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script>
 
-
-        document.getElementById("sound").addEventListener('mousemove',function(){
-            var drum = new Pizzicato.Sound('./drum.mp3', function() {
+        document.getElementById("sound1").addEventListener('mousedown',function(){
+            var drum = new Pizzicato.Sound('./drum1.mp3', function() {
+                drum.play();
+            });
+        },false)
+        document.getElementById("sound2").addEventListener('mousedown',function(){
+            var drum = new Pizzicato.Sound('./drum2.mp3', function() {
                 drum.play();
             });
         },false)
