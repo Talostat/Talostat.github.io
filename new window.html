@@ -1,0 +1,20 @@
+<html>
+  <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  </head>
+  <body>
+	<textarea id="text" placeholder="input html link" style="width:400px">talostat.github.io/flicking</textarea>
+    <a href="#" onClick="new_window()">New Window</a>
+    <br>
+	<script>
+		function new_window(){
+			let html = document.getElementById("text").value;
+			let newstr = html.replace(/https:\/\//i, '');
+			let new_html = "https://" + newstr;
+			//console.log(new_html);
+			window.open(new_html, 'Tracking', 'width=300,height=300'); 
+			return false
+		}
+	</script>
+  </body>
+</html>
