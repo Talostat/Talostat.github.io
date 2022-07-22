@@ -6,6 +6,6 @@ FPS Index : (https://talostat.github.io/FPS/index.html)
 
 Motion Tracking for FPS: (https://talostat.github.io/FPS/tracking.html)
 
-Motion Flicking for FPS: (https://talostat.github.io/FPS/Flicking.html)
+Motion Flicking for FPS: (https://talostat.github.io/FPS/flicking.html)
 
 sound: ((https://talostat.github.io/sound/button_sound.html))
