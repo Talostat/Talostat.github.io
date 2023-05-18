@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>canvas绘图</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .canvas-container {
+            position: relative;
+        }
+
+        .canvas-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            z-index: 2;
+        }
+    </style>
+</head>
+
+<body>
+    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+    <label><input type="checkbox" id="activeYellow"> Draw Yellow Line</label>
+    <button id="swapLayers">交换层级</button>
+    <input type="number" id="rulerInput" value=100>Ruler</input>
+    <div class="canvas-container">
+        <canvas id="canvas1" class="canvas-layer" width="1600" height="800"></canvas>
+        <canvas id="canvas2" class="canvas-layer" width="1600" height="800"></canvas>
+    </div>
+    <script type="text/javascript">
+        document.addEventListener("contextmenu", function (event) {
+            event.preventDefault();
+        });
+        var isSwapped = false;
+        var isMouseUp = false;
+        var isDrawing = false;
+        var lines = [];
+        var STDline = []
+        var swapLayers = document.getElementById("swapLayers");
+        var rulerInput = document.getElementById("rulerInput");
+        var activeYellow = document.getElementById("activeYellow");
+        var canvas1 = document.getElementById("canvas1");
+        var canvas2 = document.getElementById("canvas2");
+        var ctx = canvas1.getContext("2d");
+        var ctx2 = canvas2.getContext("2d");
+        var lineColor = "blue"
+        var labelColor = "red"
+        ctx.lineWidth = 4;
+        ctx.lineCap = "butt"; // 设置线条末端样式为平头
+        ctx.lineJoin = "miter"; // 设置线条连接样式为尖角
+        ctx.font = "14px Arial"
+        ctx2.lineWidth = 4;
+        ctx2.lineCap = "butt"; // 设置线条末端样式为平头
+        ctx2.lineJoin = "miter"; // 设置线条连接样式为尖角        
+        ctx2.font = "20px Arial"
+        var rect = canvas2.getBoundingClientRect();
+        var ruler = rulerInput.value;
+
+        function loadImage(file) {
+            var reader = new FileReader();
+            reader.onload = function (event) {
+                var img = new Image();
+                img.onload = function () {
+                    // 计算绘制图像的缩放比例
+                    var scale = Math.min(canvas1.width / img.width, canvas1.height / img.height);
+                    var width = img.width * scale;
+                    var height = img.height * scale;
+                    var x = (canvas1.width - width) / 2;
+                    var y = (canvas1.height - height) / 2;
+
+                    ctx.drawImage(img, x, y, width, height);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+        // 交换层级
+        swapLayers.addEventListener("click", function (e) {
+            var parent = canvas1.parentNode;
+            if (isSwapped) {
+                parent.insertBefore(canvas1, canvas2);
+            } else {
+                parent.insertBefore(canvas2, canvas1);
+            }
+            isSwapped = !isSwapped; // 切换状态
+        });
+        // 更新標尺
+        rulerInput.addEventListener("input", function () {
+            ruler = rulerInput.value;
+            redrawCanvas(ctx2, canvas2);
+            drawSTDline()
+            drawLines()
+        });
+
+        // 手动画黄色直线
+        activeYellow.addEventListener("change", function () {
+            lineColor = activeYellow.checked ? "yellow" : "blue";
+        });
+
+        // 拖动图片加载为背景
+        canvas1.addEventListener("dragover", function (e) {
+            e.preventDefault();
+        });
+        canvas1.addEventListener("drop", function (e) {
+            e.preventDefault();
+            var file = e.dataTransfer.files[0];
+            loadImage(file);
+        });
+
+
+        canvas1.addEventListener("mousedown", function (e) {
+            console.log("mousedown")
+            isDrawing = true;
+            var startPosition = { x: e.clientX, y: e.clientY - rect.top };
+            lines.push({ start: startPosition, end: startPosition });
+        });
+
+        canvas1.addEventListener("mousemove", function (e) {
+            if (isDrawing) {
+                console.log("mousemove")
+                var currentPosition = { x: e.clientX, y: e.clientY - rect.top };
+                lines[lines.length - 1].end = currentPosition;
+                redrawCanvas(ctx, canvas1);
+                drawLines();
+            }
+        });
+
+        canvas1.addEventListener("mouseup", function (e) {
+            if (isDrawing) {
+                isMouseUp = true
+                console.log("mouseup")
+                isDrawing = false;
+                var endPosition = { x: e.clientX, y: e.clientY - rect.top };
+                lines[lines.length - 1].end = endPosition;
+                redrawCanvas(ctx, canvas1);
+                drawLines();
+                isMouseUp = false;
+            }
+        });
+
+        function redrawCanvas(ctx, canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawLines() {
+            //draw current line
+            var line = lines[lines.length - 1]
+            var labelX = (line.start.x + line.end.x) / 2
+            var labelY = (line.start.y + line.end.y) / 2 + 20
+            lineLength = calLength(line)
+            var label = String(lineLength)
+            ctx.beginPath()
+            ctx.moveTo(line.start.x, line.start.y)
+            ctx.lineTo(line.end.x, line.end.y)
+            ctx.strokeStyle = lineColor
+            ctx.stroke()
+            ctx.fillStyle = labelColor
+            ctx.fillText(label, labelX, labelY)
+
+            //store current line attr when mouse up 
+            if (isMouseUp) {
+                attrlist = {
+                    label: label,
+                    labelX: labelX,
+                    labelY: labelY,
+                    labelColor: labelColor,
+                    lineColor: lineColor,
+                }
+                for (var key in attrlist) {
+                    line[key] = attrlist[key]
+                }
+            }
+            // draw preious lines
+            for (var i = 0; i < lines.length - 1; i++) {
+                line = lines[i];
+                ctx.beginPath();
+                ctx.moveTo(line.start.x, line.start.y);
+                ctx.lineTo(line.end.x, line.end.y);
+                ctx.strokeStyle = line.lineColor
+                ctx.stroke();
+                ctx.fillStyle = line.textColor;
+                ctx.fillText(line.label, line.labelX, line.labelY);
+            }
+        }
+
+
+        function calLength(line){
+            let stdx = STDline[0].end.x - STDline[0].start.x
+            let stdy = STDline[0].end.y - STDline[0].start.y
+            let stdistance = Math.sqrt(stdx * stdx + stdy * stdy)
+            let dx = line.end.x - line.start.x
+            let dy = line.end.y - line.start.y
+            let distance = Math.sqrt(dx * dx + dy * dy)
+            lineLength = (ruler * distance / stdistance).toFixed(0)
+            return lineLength
+        }
+
+
+        canvas2.addEventListener("mousedown", function (e) {
+            console.log("mousedown")
+            isDrawing = true;
+            startPosition = { x: e.clientX, y: e.clientY - rect.top };
+            STDline[0] = { start: startPosition, end: startPosition };
+        });
+
+        canvas2.addEventListener("mousemove", function (e) {
+            if (isDrawing) {
+                console.log("mousemove")
+                rect = canvas2.getBoundingClientRect();
+                currentPosition = { x: e.clientX, y: e.clientY - rect.top };
+                STDline[0].end = currentPosition;
+                redrawCanvas(ctx2, canvas2);
+                drawSTDline();
+            }
+        });
+
+        canvas2.addEventListener("mouseup", function (e) {
+            if (isDrawing) {
+                isMouseUp = true
+                console.log("mouseup")
+                isDrawing = false;
+                endPosition = { x: e.clientX, y: e.clientY - rect.top };
+                STDline[0].end = endPosition;
+                redrawCanvas(ctx2, canvas2);
+                drawSTDline();
+                isMouseUp = false;
+            }
+        });
+
+        function drawSTDline() {
+            //draw current line
+            labelX = (STDline[0].start.x + STDline[0].end.x) / 2
+            labelY = (STDline[0].start.y + STDline[0].end.y) / 2
+            console.log(ruler)
+            label = String(ruler)
+            ctx2.beginPath()
+            ctx2.moveTo(STDline[0].start.x, STDline[0].start.y)
+            ctx2.lineTo(STDline[0].end.x, STDline[0].end.y)
+            ctx2.strokeStyle = "red"
+            ctx2.stroke()
+            ctx2.fillStyle = labelColor
+            ctx2.fillText(label, labelX, labelY)
+        }
+
+
+    </script>
+</body>
+
+</html>
