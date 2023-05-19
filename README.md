@@ -6,7 +6,7 @@ Open & Temporary Tools
 
 | Tools | Url |
 | ------ | ------ |
-| Online Scale | https://talostat.github.io/FPS/jsdraw.html |
+| Online Scale | https://talostat.github.io/jsdraw.html |
 | FPS Training | https://talostat.github.io/FPS/index.html |
 
 ## License
