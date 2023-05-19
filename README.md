@@ -1,11 +1,14 @@
-MainPage:  (https://talostat.github.io)
+# Talos's Stuff
 
-AlbionOnline Tool: (https://talostat.github.io/AlbionOnline/grap_market_price_data)
+Open & Temporary Tools
 
-FPS Index : (https://talostat.github.io/FPS/index.html)
+### Develop Tools
 
-Motion Tracking for FPS: (https://talostat.github.io/FPS/tracking.html)
+| Tools | Url |
+| ------ | ------ |
+| Online Scale | https://talostat.github.io/FPS/jsdraw.html |
+| FPS Training | https://talostat.github.io/FPS/index.html |
 
-Motion Flicking for FPS: (https://talostat.github.io/FPS/flicking.html)
-
-sound: ((https://talostat.github.io/sound/button_sound.html))
+## License
+MIT
+**Free Tools**
