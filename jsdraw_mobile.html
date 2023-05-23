@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>canvas绘图</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .canvas-container {
+            position: relative;
+            background-color: yellow;
+            width: 1600px;
+            height: 800px;
+            background-repeat: no-repeat;
+            background-size: contain;
+            background-color: white;
+            background-position: left top;
+        }
+
+        .canvas-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-size: cover;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .canvas-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .canvas-layer.red {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cline x1='0' y1='10' x2='20' y2='10' stroke='red'/%3E%3Cline x1='10' y1='0' x2='10' y2='20' stroke='red'/%3E%3C/svg%3E") 16 14, auto;
+        }
+
+        .canvas-layer.blue {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cline x1='0' y1='10' x2='20' y2='10' stroke='blue'/%3E%3Cline x1='10' y1='0' x2='10' y2='20' stroke='blue'/%3E%3C/svg%3E") 16 14, auto;
+        }
+    </style>
+</head>
+
+<body>
+    <input type="file" id="imageInput" accept="image/*">
+    <label hidden><input type="checkbox" id="activeYellow"> Draw Yellow Line</label>
+    <button id="switchPenBtn">Switch Pen</button>
+    <button id="cleanLinebtn">Clean Line</button>
+    <input type="number" id="rulerInput" value=100>Ruler</input>
+    <div class="canvas-container" id="canvasContainer">
+        <!-- canvas1 is ruler,  canvas2 is subline -->
+        <canvas id="canvas1" class="canvas-layer blue" width="1600" height="800"></canvas>
+        <canvas id="canvas2" class="canvas-layer red" width="1600" height="800"></canvas>
+    </div>
+
+    <script type="text/javascript">
+        document.addEventListener("contextmenu", function (event) {
+            //event.preventDefault();
+        });
+        var isSwapped = false
+        isMouseUp = false
+        isDrawing = false
+        isUpdateRuler = false
+        isCleanLine = false
+        lines = []
+        mainLine = []
+        mainLineColor = "red"
+        lineColor = "blue"
+        mainlabelColor = "blue"
+        labelColor = "red"
+        labelfont = 'bold 20px Verdana';
+        rect = canvas2.getBoundingClientRect()
+        ruler = rulerInput.value
+        ctx1 = canvas1.getContext("2d")
+        ctx2 = canvas2.getContext("2d")
+        ctx1.lineWidth = 4
+        ctx1.lineCap = "butt"; // 设置线条末端样式为平头
+        ctx1.lineJoin = "miter"; // 设置线条连接样式为尖角
+        ctx1.font = "14px Arial"
+        ctx2.lineWidth = 6;
+        ctx2.lineCap = "butt"; // 设置线条末端样式为平头
+        ctx2.lineJoin = "miter"; // 设置线条连接样式为尖角        
+        ctx2.font = "20px Arial"
+
+
+        function isCursorOnLine(mouseX, mouseY, x1, y1, x2, y2) {
+            const distance = Math.abs((y2 - y1) * mouseX - (x2 - x1) * mouseY + x2 * y1 - y2 * x1) /
+                Math.sqrt(Math.pow(y2 - y1, 2) + Math.pow(x2 - x1, 2));
+            return distance < 5; // 設定觸發清除的距離閾值
+        }
+
+
+        function redrawCanvas(ctx1, canvas) {
+            ctx1.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+
+        function switchLayer(toCanv = null) {
+            var parent = canvas1.parentNode;
+            if (toCanv == 1) {
+                parent.insertBefore(canvas2, canvas1);
+            } else if (toCanv == 2) {
+                parent.insertBefore(canvas2, canvas1);
+            } else if (toCanv == null) {
+                if (isSwapped) {
+                    parent.insertBefore(canvas1, canvas2);
+                } else {
+                    parent.insertBefore(canvas2, canvas1);
+                }
+                isSwapped = !isSwapped; // 切换状态
+            }
+        }
+
+
+        function drawLines() {
+
+            //draw current line
+            line = lines[lines.length - 1]
+            labelX = (line.start.x + line.end.x) / 2
+            labelY = (line.start.y + line.end.y) / 2
+            lineLength = calLength(line)
+            label = String(lineLength)
+            ctx1.beginPath()
+            ctx1.moveTo(line.start.x, line.start.y)
+            ctx1.lineTo(line.end.x, line.end.y)
+            ctx1.strokeStyle = lineColor
+            ctx1.stroke()
+            // const backgroundColor = 'white';
+            // const textColor = 'black';
+            // const padding = 5;
+            // const textWidth = ctx1.measureText(label).width;
+            // const rectWidth = textWidth + (padding * 2);
+            // const rectHeight = parseInt(ctx1.font);
+            // ctx1.fillStyle = backgroundColor;
+            // ctx1.fillRect(labelX - padding, labelY - rectHeight + 5, rectWidth, rectHeight);
+
+            ctx1.font = labelfont
+            ctx1.fillStyle = labelColor
+            ctx1.fillText(label, labelX, labelY, 100)
+
+            //store current line attr when mouse up 
+            if (isMouseUp) {
+                attrlist = {
+                    label: label,
+                    labelX: labelX,
+                    labelY: labelY,
+                    labelColor: labelColor,
+                    lineColor: lineColor,
+                }
+                for (var key in attrlist) {
+                    line[key] = attrlist[key]
+                }
+            }
+
+            // draw preious lines
+            for (var i = 0; i < lines.length - 1; i++) {
+                line = lines[i];
+                // updateLabels
+
+                lineLength = calLength(line)
+                label = String(lineLength)
+                line['label'] = lineLength
+
+                ctx1.beginPath();
+                ctx1.moveTo(line.start.x, line.start.y);
+                ctx1.lineTo(line.end.x, line.end.y);
+                ctx1.strokeStyle = line.lineColor
+                ctx1.stroke();
+                ctx1.fillStyle = line.textColor;
+                ctx1.fillText(label, line.labelX, line.labelY);
+            }
+        }
+
+
+        function drawMainLine() {
+            //draw current line
+            labelX = (mainLine[0].start.x + mainLine[0].end.x) / 2
+            labelY = (mainLine[0].start.y + mainLine[0].end.y) / 2
+            label = String(ruler)
+            ctx2.beginPath()
+            ctx2.moveTo(mainLine[0].start.x, mainLine[0].start.y)
+            ctx2.lineTo(mainLine[0].end.x, mainLine[0].end.y)
+            ctx2.strokeStyle = mainLineColor
+            ctx2.stroke()
+            ctx2.font = labelfont
+            ctx2.fillStyle = mainlabelColor
+            ctx2.fillText(label, labelX, labelY)
+        }
+
+
+        function calLength(line) {
+            if (typeof mainLine[0] !== 'undefined') {
+                let stdx = mainLine[0].end.x - mainLine[0].start.x
+                let stdy = mainLine[0].end.y - mainLine[0].start.y
+                let stdistance = Math.sqrt(stdx * stdx + stdy * stdy)
+                let dx = line.end.x - line.start.x
+                let dy = line.end.y - line.start.y
+                let distance = Math.sqrt(dx * dx + dy * dy)
+                lineLength = (ruler * distance / stdistance).toFixed(0)
+                return lineLength
+            }
+            return 0
+        }
+
+
+        function subLineClearClick(e) {
+            console.log("clearclick")
+            const mouseX = e.offsetX;
+            const mouseY = e.offsetY;
+
+            // 判斷滑鼠是否在特定線段上
+            for (var i = 0; i < lines.length; i++) {
+                line = lines[i]
+                let x1, y1, x2, y2;
+                [x1, y1, x2, y2] = [line.start.x, line.start.y, line.end.x, line.end.y];
+                if (isCursorOnLine(mouseX, mouseY, x1, y1, x2, y2)) {
+                    lines.splice(i, 1);
+                    break
+                }
+            }
+            redrawCanvas(ctx1, canvas1)
+            if (lines.length != 0) {
+                drawLines()
+            }
+        }
+
+        function manageCleanLineEvent() {
+            if (isCleanLine) {
+                // remove drawLine Event                 // add CleanLine Event
+                canvas1.removeEventListener("touchstart", subLinesMouseDown);
+                canvas1.removeEventListener("touchmove", subLinesMouseMove);
+                canvas1.removeEventListener("touchend", subLinesMouseUp);
+                canvas1.addEventListener("touchstart", subLineClearClick);
+
+            } else {
+                // remove CleanLine Event  resume drawLine Event
+                canvas1.removeEventListener("touchstart", subLineClearClick);
+                canvas1.addEventListener("touchstart", subLinesMouseDown);
+                canvas1.addEventListener("touchmove", subLinesMouseMove);
+                canvas1.addEventListener("touchend", subLinesMouseUp);
+            }
+        }
+
+
+        // 激活清除子線
+        cleanLinebtn.addEventListener("click", function (e) {
+            isCleanLine = true
+            console.log("Clean Line:" + isCleanLine)
+            switchLayer(toCanv = 1);
+            manageCleanLineEvent()
+        });
+
+
+        // 換筆
+        switchPenBtn.addEventListener("click", function (e) {
+            switchLayer();
+            if (isCleanLine != false) {
+                isCleanLine = false
+                manageCleanLineEvent()
+            }
+        });
+
+
+        rulerInput.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const delta = Math.sign(event.deltaY);
+            if (delta > 0) {
+                rulerInput.stepDown();
+            } else if (delta < 0) {
+                rulerInput.stepUp();
+            }
+            rulerChange()
+        });
+        // 更新標尺
+        rulerInput.addEventListener("input", rulerChange);
+
+        function rulerChange() {
+            isUpdateRuler = true
+            ruler = rulerInput.value
+            if (mainLine.length > 0) {
+                redrawCanvas(ctx2, canvas2)
+                drawMainLine()
+            }
+            if (lines.length > 0) {
+                redrawCanvas(ctx1, canvas1)
+                drawLines()
+            }
+            isUpdateRuler = false
+        }
+
+
+        // 手动画黄色直线
+        activeYellow.addEventListener("change", function () {
+            lineColor = activeYellow.checked ? "yellow" : "blue";
+        });
+
+
+        // 拖动图片加载为背景
+        canvasContainer.addEventListener("dragover", function (e) {
+            e.preventDefault();
+        });
+        canvasContainer.addEventListener("drop", function (e) {
+            e.preventDefault();
+            uploadImage(e);
+        });
+        imageInput.addEventListener("change", function (e) {
+            uploadImage(e);
+        });
+        function uploadImage(e) {
+            console.log("drop")
+            if (typeof e.target.files !== "undefined") {
+                var file = e.target.files[0];
+            } else if (typeof e.dataTransfer.files !== "undefined") {
+                var file = e.dataTransfer.files[0];
+            }
+            if (file.type.startsWith('image/')) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var imageUrl = e.target.result;
+                    canvasContainer.style.backgroundImage = 'url(' + imageUrl + ')';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function subLinesMouseDown(e) {
+            console.log("mousedown")
+            isDrawing = true;
+            var startPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY - rect.top };
+            lines.push({ start: startPosition, end: startPosition });
+        }
+
+        function subLinesMouseMove(e) {
+            if (isDrawing) {
+                console.log("mousemove")
+                var currentPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY - rect.top };
+                lines[lines.length - 1].end = currentPosition;
+                redrawCanvas(ctx1, canvas1);
+                drawLines();
+            }
+        }
+
+        function subLinesMouseUp(e) {
+            if (isDrawing) {
+                isMouseUp = true
+                console.log("mouseup")
+                isDrawing = false;
+                var endPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY - rect.top };
+                lines[lines.length - 1].end = endPosition;
+                redrawCanvas(ctx1, canvas1);
+                drawLines();
+                isMouseUp = false;
+            }
+        }
+
+        function mainLinesMousedown(e) {
+            console.log("mousedown")
+            isDrawing = true;
+            startPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY - rect.top };
+            mainLine[0] = { start: startPosition, end: startPosition };
+        }
+        function mainLinesMouseMove(e) {
+            if (isDrawing) {
+                console.log("mousemove")
+                rect = canvas2.getBoundingClientRect();
+                currentPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY - rect.top };
+                mainLine[0].end = currentPosition;
+                redrawCanvas(ctx2, canvas2);
+                drawMainLine();
+            }
+        }
+        function mainLinesMouseUp(e) {
+            if (isDrawing) {
+                isMouseUp = true
+                console.log("mouseup")
+                isDrawing = false;
+                endPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY - rect.top };
+                mainLine[0].end = endPosition;
+                redrawCanvas(ctx2, canvas2);
+                drawMainLine();
+                if (lines.length != 0) {
+                    redrawCanvas(ctx1, canvas1)
+                    drawLines()
+                }
+                isMouseUp = false;
+            }
+        }
+
+        // 畫子線
+        canvas1.addEventListener("touchstart", subLinesMouseDown);
+        canvas1.addEventListener("touchmove", subLinesMouseMove);
+        canvas1.addEventListener("touchend", subLinesMouseUp);
+        canvas2.addEventListener("touchstart", mainLinesMousedown);
+        canvas2.addEventListener("touchmove", mainLinesMouseMove);
+        canvas2.addEventListener("touchend", mainLinesMouseUp);
+    </script>
+</body>
+
+</html>

@@ -3,13 +3,20 @@
 
 <head>
     <meta charset="utf-8">
-    <title>canvas绘图</title>
+    <title>Canvas Scale</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
+            user-select: none;
         }
 
+        button {
+            padding: 5px 5px
+        }
+        .btnlab{
+            padding: 0 5px;
+        }
         .canvas-container {
             position: relative;
             background-color: yellow;
@@ -45,15 +52,28 @@
         .canvas-layer.blue {
             cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cline x1='0' y1='10' x2='20' y2='10' stroke='blue'/%3E%3Cline x1='10' y1='0' x2='10' y2='20' stroke='blue'/%3E%3C/svg%3E") 16 14, auto;
         }
+
+        input[type=file] {
+            width: 250px;
+            max-width: 100%;
+            color: #444;
+            padding: 5px;
+            background: #fff;
+            border-radius: 10px;
+            border: 1px solid #555;
+        }
     </style>
 </head>
 
 <body>
-    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+    <input type="file" id="imageInput" accept="image/*"></input>
     <label hidden><input type="checkbox" id="activeYellow"> Draw Yellow Line</label>
-    <button id="switchPenBtn">Switch Pen</button>
-    <button id="cleanLinebtn">Clean Line</button>
-    <input type="number" id="rulerInput" value=100>Ruler</input>
+    <label class="btnlab"><button id="switchPenBtn">Switch Pen</button></label>
+    <label class="btnlab"><button id="cleanLinebtn">Clean Line</button></label>
+    <label class="btnlab"><button id="cleanAllbtn">Clean All</button></label>
+    <input type="number" id="rulerInput" value=100>Ruler
+    <button id="savePicturebtn" hidden>Save Picture</button>
+    <input type="file" size="60" id="importCanvasbtn" accept="*" hidden>
     <div class="canvas-container" id="canvasContainer">
         <!-- canvas1 is ruler,  canvas2 is subline -->
         <canvas id="canvas1" class="canvas-layer blue" width="1600" height="800"></canvas>
@@ -97,8 +117,8 @@
         }
 
 
-        function redrawCanvas(ctx1, canvas) {
-            ctx1.clearRect(0, 0, canvas.width, canvas.height);
+        function clearCanvas(ctx, canvas) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
 
@@ -140,13 +160,12 @@
             // const rectHeight = parseInt(ctx1.font);
             // ctx1.fillStyle = backgroundColor;
             // ctx1.fillRect(labelX - padding, labelY - rectHeight + 5, rectWidth, rectHeight);
-
             ctx1.font = labelfont
             ctx1.fillStyle = labelColor
             ctx1.fillText(label, labelX, labelY, 100)
 
             //store current line attr when mouse up 
-            if (isMouseUp) {
+            if (isMouseUp && label !== 0) {
                 attrlist = {
                     label: label,
                     labelX: labelX,
@@ -225,7 +244,7 @@
                     break
                 }
             }
-            redrawCanvas(ctx1, canvas1)
+            clearCanvas(ctx1, canvas1)
             if (lines.length != 0) {
                 drawLines()
             }
@@ -239,29 +258,34 @@
                 canvas1.removeEventListener("mouseup", subLinesMouseUp);
                 canvas1.addEventListener("click", subLineClearClick);
 
-                canvas1.removeEventListener("touchstart", subLinesMouseDown);
-                canvas1.removeEventListener("touchmove", subLinesMouseMove);
-                canvas1.removeEventListener("touchend", subLinesMouseUp);
-                canvas1.addEventListener("touchstart", subLineClearClick);
-
             } else {
                 // remove CleanLine Event  resume drawLine Event
                 canvas1.removeEventListener("click", subLineClearClick);                //
                 canvas1.addEventListener("mousedown", subLinesMouseDown);
                 canvas1.addEventListener("mousemove", subLinesMouseMove);
                 canvas1.addEventListener("mouseup", subLinesMouseUp);
-
-                canvas1.removeEventListener("touchstart", subLineClearClick);
-                canvas1.addEventListener("touchstart", subLinesMouseDown);
-                canvas1.addEventListener("touchmove", subLinesMouseMove);
-                canvas1.addEventListener("touchend", subLinesMouseUp);
             }
+        }
+
+
+        function rulerChange() {
+            isUpdateRuler = true
+            ruler = rulerInput.value
+            if (mainLine.length > 0) {
+                clearCanvas(ctx2, canvas2)
+                drawMainLine()
+            }
+            if (lines.length > 0) {
+                clearCanvas(ctx1, canvas1)
+                drawLines()
+            }
+            isUpdateRuler = false
         }
 
 
         // 激活清除子線
         cleanLinebtn.addEventListener("click", function (e) {
-            isCleanLine = true
+            isCleanLine = (isCleanLine == true) ? false : true;
             console.log("Clean Line:" + isCleanLine)
             switchLayer(toCanv = 1);
             manageCleanLineEvent()
@@ -277,7 +301,7 @@
             }
         });
 
-
+        // 更新標尺 scroll
         rulerInput.addEventListener('wheel', (event) => {
             event.preventDefault();
             const delta = Math.sign(event.deltaY);
@@ -288,28 +312,49 @@
             }
             rulerChange()
         });
+
         // 更新標尺
         rulerInput.addEventListener("input", rulerChange);
-
-        function rulerChange() {
-            isUpdateRuler = true
-            ruler = rulerInput.value
-            if (mainLine.length > 0) {
-                redrawCanvas(ctx2, canvas2)
-                drawMainLine()
-            }
-            if (lines.length > 0) {
-                redrawCanvas(ctx1, canvas1)
-                drawLines()
-            }
-            isUpdateRuler = false
-        }
 
 
         // 手动画黄色直线
         activeYellow.addEventListener("change", function () {
             lineColor = activeYellow.checked ? "yellow" : "blue";
         });
+
+        //清除所有
+        cleanAllbtn.addEventListener("click", function () {
+            clearCanvas(ctx1, canvas1)
+            clearCanvas(ctx2, canvas2)
+            canvasContainer.style.backgroundImage = "none"
+            lines = []
+            mainLine = []
+        });
+
+        savePicturebtn.addEventListener("click", function () {
+            // var image = canvas1.toDataURL("image/png").replace("image/png", "image/octet-stream");
+            // window.location.href = image; // it will save locally
+            var canvasData = {
+                backgroundImage: canvasContainer.style.backgroundImage,
+                lines: { 'mainLine': {}, 'subLines': {} }
+            };
+            canvasData.lines.mainLine = mainLine;
+            canvasData.lines.subLines = lines;
+            var jsonString = JSON.stringify(canvasData);
+            console.log(jsonString);
+        });
+
+        importCanvasbtn.addEventListener("click", function () {
+            var canvasData = JSON.parse(jsonString);
+            canvasContainer.style.backgroundImage = canvasData.backgroundImage;
+
+            var lines = new Image();
+            lines.src = canvasData.lines[0];
+            lines.onload = function () {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(lines, 0, 0);
+            };
+        })
 
 
         // 拖动图片加载为背景
@@ -318,18 +363,27 @@
         });
         canvasContainer.addEventListener("drop", function (e) {
             e.preventDefault();
+            uploadImage(e);
+        });
+        imageInput.addEventListener("change", function (e) {
+            uploadImage(e);
+        });
+        function uploadImage(e) {
             console.log("drop")
-            var file = event.dataTransfer.files[0];
+            if (typeof e.target.files !== "undefined") {
+                var file = e.target.files[0];
+            } else if (typeof e.dataTransfer.files !== "undefined") {
+                var file = e.dataTransfer.files[0];
+            }
             if (file.type.startsWith('image/')) {
                 var reader = new FileReader();
-                reader.onload = function (event) {
-                    var imageUrl = event.target.result;
+                reader.onload = function (e) {
+                    var imageUrl = e.target.result;
                     canvasContainer.style.backgroundImage = 'url(' + imageUrl + ')';
                 };
                 reader.readAsDataURL(file);
             }
-        });
-
+        }
 
         function subLinesMouseDown(e) {
             console.log("mousedown")
@@ -343,7 +397,7 @@
                 console.log("mousemove")
                 var currentPosition = { x: e.clientX, y: e.clientY - rect.top };
                 lines[lines.length - 1].end = currentPosition;
-                redrawCanvas(ctx1, canvas1);
+                clearCanvas(ctx1, canvas1);
                 drawLines();
             }
         }
@@ -355,7 +409,7 @@
                 isDrawing = false;
                 var endPosition = { x: e.clientX, y: e.clientY - rect.top };
                 lines[lines.length - 1].end = endPosition;
-                redrawCanvas(ctx1, canvas1);
+                clearCanvas(ctx1, canvas1);
                 drawLines();
                 isMouseUp = false;
             }
@@ -373,7 +427,7 @@
                 rect = canvas2.getBoundingClientRect();
                 currentPosition = { x: e.clientX, y: e.clientY - rect.top };
                 mainLine[0].end = currentPosition;
-                redrawCanvas(ctx2, canvas2);
+                clearCanvas(ctx2, canvas2);
                 drawMainLine();
             }
         }
@@ -384,10 +438,10 @@
                 isDrawing = false;
                 endPosition = { x: e.clientX, y: e.clientY - rect.top };
                 mainLine[0].end = endPosition;
-                redrawCanvas(ctx2, canvas2);
+                clearCanvas(ctx2, canvas2);
                 drawMainLine();
                 if (lines.length != 0) {
-                    redrawCanvas(ctx1, canvas1)
+                    clearCanvas(ctx1, canvas1)
                     drawLines()
                 }
                 isMouseUp = false;
@@ -401,13 +455,6 @@
         canvas2.addEventListener("mousedown", mainLinesMousedown);
         canvas2.addEventListener("mousemove", mainLinesMouseMove);
         canvas2.addEventListener("mouseup", mainLinesMouseUp);
-
-        canvas1.addEventListener("touchstart", subLinesMouseDown);
-        canvas1.addEventListener("touchmove", subLinesMouseMove);
-        canvas1.addEventListener("touchend", subLinesMouseUp);
-        canvas2.addEventListener("touchstart", mainLinesMousedown);
-        canvas2.addEventListener("touchmove", mainLinesMouseMove);
-        canvas2.addEventListener("touchend", mainLinesMouseUp);
     </script>
 </body>
 
