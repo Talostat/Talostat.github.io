@@ -36,20 +36,28 @@
             position: absolute;
             top: 0;
             left: 0;
+        }
+
+        .canvas-layer.red {
             cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cline x1='0' y1='10' x2='20' y2='10' stroke='red'/%3E%3Cline x1='10' y1='0' x2='10' y2='20' stroke='red'/%3E%3C/svg%3E") 16 14, auto;
+        }
+
+        .canvas-layer.blue {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cline x1='0' y1='10' x2='20' y2='10' stroke='blue'/%3E%3Cline x1='10' y1='0' x2='10' y2='20' stroke='blue'/%3E%3C/svg%3E") 16 14, auto;
         }
     </style>
 </head>
 
 <body>
     <input type="file" id="imageInput" accept="image/*" style="display: none;">
-    <label><input type="checkbox" id="activeYellow"> Draw Yellow Line</label>
+    <label hidden><input type="checkbox" id="activeYellow"> Draw Yellow Line</label>
     <button id="switchPenBtn">Switch Pen</button>
     <button id="cleanLinebtn">Clean Line</button>
     <input type="number" id="rulerInput" value=100>Ruler</input>
     <div class="canvas-container" id="canvasContainer">
-        <canvas id="canvas1" class="canvas-layer" width="1600" height="800"></canvas>
-        <canvas id="canvas2" class="canvas-layer" width="1600" height="800"></canvas>
+        <!-- canvas1 is ruler,  canvas2 is subline -->
+        <canvas id="canvas1" class="canvas-layer blue" width="1600" height="800"></canvas>
+        <canvas id="canvas2" class="canvas-layer red" width="1600" height="800"></canvas>
     </div>
 
     <script type="text/javascript">
@@ -63,8 +71,11 @@
         isCleanLine = false
         lines = []
         mainLine = []
+        mainLineColor = "red"
         lineColor = "blue"
+        mainlabelColor = "blue"
         labelColor = "red"
+        labelfont = 'bold 20px Verdana';
         rect = canvas2.getBoundingClientRect()
         ruler = rulerInput.value
         ctx1 = canvas1.getContext("2d")
@@ -109,6 +120,7 @@
 
 
         function drawLines() {
+
             //draw current line
             line = lines[lines.length - 1]
             labelX = (line.start.x + line.end.x) / 2
@@ -120,8 +132,18 @@
             ctx1.lineTo(line.end.x, line.end.y)
             ctx1.strokeStyle = lineColor
             ctx1.stroke()
+            // const backgroundColor = 'white';
+            // const textColor = 'black';
+            // const padding = 5;
+            // const textWidth = ctx1.measureText(label).width;
+            // const rectWidth = textWidth + (padding * 2);
+            // const rectHeight = parseInt(ctx1.font);
+            // ctx1.fillStyle = backgroundColor;
+            // ctx1.fillRect(labelX - padding, labelY - rectHeight + 5, rectWidth, rectHeight);
+
+            ctx1.font = labelfont
             ctx1.fillStyle = labelColor
-            ctx1.fillText(label, labelX, labelY)
+            ctx1.fillText(label, labelX, labelY, 100)
 
             //store current line attr when mouse up 
             if (isMouseUp) {
@@ -157,7 +179,7 @@
         }
 
 
-        function drawmainLine() {
+        function drawMainLine() {
             //draw current line
             labelX = (mainLine[0].start.x + mainLine[0].end.x) / 2
             labelY = (mainLine[0].start.y + mainLine[0].end.y) / 2
@@ -165,22 +187,26 @@
             ctx2.beginPath()
             ctx2.moveTo(mainLine[0].start.x, mainLine[0].start.y)
             ctx2.lineTo(mainLine[0].end.x, mainLine[0].end.y)
-            ctx2.strokeStyle = "red"
+            ctx2.strokeStyle = mainLineColor
             ctx2.stroke()
-            ctx2.fillStyle = labelColor
+            ctx2.font = labelfont
+            ctx2.fillStyle = mainlabelColor
             ctx2.fillText(label, labelX, labelY)
         }
 
 
         function calLength(line) {
-            let stdx = mainLine[0].end.x - mainLine[0].start.x
-            let stdy = mainLine[0].end.y - mainLine[0].start.y
-            let stdistance = Math.sqrt(stdx * stdx + stdy * stdy)
-            let dx = line.end.x - line.start.x
-            let dy = line.end.y - line.start.y
-            let distance = Math.sqrt(dx * dx + dy * dy)
-            lineLength = (ruler * distance / stdistance).toFixed(0)
-            return lineLength
+            if (typeof mainLine[0] !== 'undefined') {
+                let stdx = mainLine[0].end.x - mainLine[0].start.x
+                let stdy = mainLine[0].end.y - mainLine[0].start.y
+                let stdistance = Math.sqrt(stdx * stdx + stdy * stdy)
+                let dx = line.end.x - line.start.x
+                let dy = line.end.y - line.start.y
+                let distance = Math.sqrt(dx * dx + dy * dy)
+                lineLength = (ruler * distance / stdistance).toFixed(0)
+                return lineLength
+            }
+            return 0
         }
 
 
@@ -207,20 +233,28 @@
 
         function manageCleanLineEvent() {
             if (isCleanLine) {
-                // remove drawLine Event
+                // remove drawLine Event                 // add CleanLine Event
                 canvas1.removeEventListener("mousedown", subLinesMouseDown);
                 canvas1.removeEventListener("mousemove", subLinesMouseMove);
                 canvas1.removeEventListener("mouseup", subLinesMouseUp);
-                // add CleanLine Event
                 canvas1.addEventListener("click", subLineClearClick);
-            } else {
-                // remove CleanLine Event
-                canvas1.removeEventListener("click", subLineClearClick);
 
-                // resume drawLine Event
+                canvas1.removeEventListener("touchstart", subLinesMouseDown);
+                canvas1.removeEventListener("touchmove", subLinesMouseMove);
+                canvas1.removeEventListener("touchend", subLinesMouseUp);
+                canvas1.addEventListener("touchstart", subLineClearClick);
+
+            } else {
+                // remove CleanLine Event  resume drawLine Event
+                canvas1.removeEventListener("click", subLineClearClick);                //
                 canvas1.addEventListener("mousedown", subLinesMouseDown);
                 canvas1.addEventListener("mousemove", subLinesMouseMove);
                 canvas1.addEventListener("mouseup", subLinesMouseUp);
+
+                canvas1.removeEventListener("touchstart", subLineClearClick);
+                canvas1.addEventListener("touchstart", subLinesMouseDown);
+                canvas1.addEventListener("touchmove", subLinesMouseMove);
+                canvas1.addEventListener("touchend", subLinesMouseUp);
             }
         }
 
@@ -241,36 +275,35 @@
                 isCleanLine = false
                 manageCleanLineEvent()
             }
-// var customCursor = document.querySelector('.custom-cursor');
-// // 取得原始的 cursor 值
-// var cursorValue = customCursor.style.cursor;
-
-// // 將 cursor 值分割為兩部分：URL 和座標
-// var parts = cursorValue.split(',');
-
-// // 取得 URL 部分並解碼
-// var urlPart = decodeURIComponent(parts[0]);
-
-// // 將 URL 部分的顏色值從 'red' 改為 'blue'
-// var updatedUrlPart = urlPart.replace("stroke='red'", "stroke='blue'");
-
-// // 更新 cursor 的值
-// customCursor.style.cursor = updatedUrlPart + ',' + parts[1];
-
-
         });
 
 
+        rulerInput.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const delta = Math.sign(event.deltaY);
+            if (delta > 0) {
+                rulerInput.stepDown();
+            } else if (delta < 0) {
+                rulerInput.stepUp();
+            }
+            rulerChange()
+        });
         // 更新標尺
-        rulerInput.addEventListener("input", function () {
+        rulerInput.addEventListener("input", rulerChange);
+
+        function rulerChange() {
             isUpdateRuler = true
             ruler = rulerInput.value
-            redrawCanvas(ctx2, canvas2)
-            drawmainLine()
-            redrawCanvas(ctx1, canvas1)
-            drawLines()
+            if (mainLine.length > 0) {
+                redrawCanvas(ctx2, canvas2)
+                drawMainLine()
+            }
+            if (lines.length > 0) {
+                redrawCanvas(ctx1, canvas1)
+                drawLines()
+            }
             isUpdateRuler = false
-        });
+        }
 
 
         // 手动画黄色直线
@@ -341,7 +374,7 @@
                 currentPosition = { x: e.clientX, y: e.clientY - rect.top };
                 mainLine[0].end = currentPosition;
                 redrawCanvas(ctx2, canvas2);
-                drawmainLine();
+                drawMainLine();
             }
         }
         function mainLinesMouseUp(e) {
@@ -352,7 +385,7 @@
                 endPosition = { x: e.clientX, y: e.clientY - rect.top };
                 mainLine[0].end = endPosition;
                 redrawCanvas(ctx2, canvas2);
-                drawmainLine();
+                drawMainLine();
                 if (lines.length != 0) {
                     redrawCanvas(ctx1, canvas1)
                     drawLines()
@@ -369,7 +402,12 @@
         canvas2.addEventListener("mousemove", mainLinesMouseMove);
         canvas2.addEventListener("mouseup", mainLinesMouseUp);
 
-
+        canvas1.addEventListener("touchstart", subLinesMouseDown);
+        canvas1.addEventListener("touchmove", subLinesMouseMove);
+        canvas1.addEventListener("touchend", subLinesMouseUp);
+        canvas2.addEventListener("touchstart", mainLinesMousedown);
+        canvas2.addEventListener("touchmove", mainLinesMouseMove);
+        canvas2.addEventListener("touchend", mainLinesMouseUp);
     </script>
 </body>
 
